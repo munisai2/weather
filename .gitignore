@@ -1,129 +1,441 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# extacting data 
+temperatures = []
+date = []
+humidity = []
+def weather_data_extract(code1, code2):
+try:
+source = requests.get('http://www.estesparkweather.net/archive_reports.php?date=' + code1 +
+code2).text
+soup = BeautifulSoup(source, 'lxml')
+tables = soup.find_all('table')
+counter = 0
+for table in tables:
+if counter % 2 == 0:
+tr = table.find('tr', class_='column-light')
+td = list(tr.find_all('td'))
+tr1 = table.find('tr', class_='column-dark')
+td1 = list(tr1.find_all('td'))
+counter += 1
+else:
+tr = table.find('tr', class_='column-dark')
+td = list(tr.find_all('td'))
+tr1 = table.find('tr', class_='column-light')
+td1 = list(tr1.find_all('td'))
+counter += 1
+temp = td[1].text.split('°')
+temperatures.append((temp[0]))
+date.append(str(counter ) + "/" + code2 + "/" + code1)
+temp1 = td1[1].text.split('%')
+humidity.append(temp1[0])
+except:
+print(" ")
 
-# C extensions
-*.so
+#collecting data and  Cleansing of Data for year 2005 to 2021
+ 
+year_start = 2005
+while year_start <= 2021:
+code = str(year_start)
+weather_data_extract(code, '01')
+weather_data_extract(code, '02')
+weather_data_extract(code, '03')
+weather_data_extract(code, '04')
+weather_data_extract(code, '05')
+weather_data_extract(code, '06')
+if year_start != 2021:
+weather_data_extract(code, '07')
+weather_data_extract(code, '08')
+weather_data_extract(code, '09')
+weather_data_extract(code, '10')
+weather_data_extract(code, '11')
+weather_data_extract(code, '12')
+year_start += 1
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# stored data in weather analysis(csv file)
+import pandas as pd
+import numpy as nm
+import matplotlib.pyplot as plt
+df=pd.read_csv('weather analysis.csv')
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+#Finding central tendency and dispersion of temperature and humidity
+#Temperature
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+summary=df['Daily Average Temperature in Faherenhite'].describe()
+summary['var']=summary['std']**2
+summary.round(2)
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
+#Humidity
+summary=df['Daily Average Humidity'].describe()
+summary['var']=summary['std']**2
+summary.round(2)
 
-# Translations
-*.mo
-*.pot
+#distribution plots
+import scipy.stats as stats
+import seaborn as sns
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+sns.scatterplot(df['Daily Average Temperature in Faherenhite'],df['Date'])
+sns.scatterplot(df['Daily Average Humidity'],df['Date']
+sns.scatterplot(df['Daily Average Temperature in Faherenhite'],df['Daily Average Humidity'])
+sns.displot(df['Daily Average Temperature in Faherenhite'],kde=True)
+sns.distplot(df['Daily Average Humidity'],kde=True)
 
-# Flask stuff:
-instance/
-.webassets-cache
+#skewness 
+df['Daily Average Humidity'].skew() # skewness is 0.29946(positively skewed)
+df['Daily Average Temperature in Faherenhite'].skew()  # skewness of temperature is -0.3268(negatively skewed)
 
-# Scrapy stuff:
-.scrapy
+#kurtosis
+df['Daily Average Humidity'].kurtosis() # kurtosis for humidity is -0.4772548756204804. It shows that our data is platykurtic
 
-# Sphinx documentation
-docs/_build/
+df['Daily Average Temperature in Faherenhite'].kurtosis() #Kurtosis for temperature is -0.51147507. It also platykurtic
 
-# PyBuilder
-target/
+# making frequency table, histogram, pie chart, frequency polygon graph,ogive
 
-# Jupyter Notebook
-.ipynb_checkpoints
+#frequency table
+df2 = pd.crosstab(index=df['Daily Average Temperature in Faherenhite'], columns='Count')
+df2
+df3 =pd.crosstab(index=df['Daily Average Humidity'], columns='count')
+df3
 
-# IPython
-profile_default/
-ipython_config.py
+#histogram for temperature
+ax=df['Daily Average Temperature in Faherenhite'].hist()
+ax.set_xlabel("Daily Average Temperature in Faherenhite ")
+ax.set_ylabel("frequency")
+plt.show()
+#histogram for humidity
+ax=df['Daily Average Humidity'].hist(color = "red")
+ax.set_xlabel("Daily Average Humidity ")
+ax.set_ylabel("frequency")
+plt.show()
 
-# pyenv
-.python-version
+#frequency polygon
+intervals=[-40,-30,-20,-10,0,10,20,30,40,50,60,70,80,90,100,110]
+plt.xticks(intervals)
+y,edges,_=plt.hist(df['Daily Average Temperature in Faherenhite'],bins=intervals, histtype
+='step',edgecolor='white')
+midpoints=0.5*(edges[1:]+edges[:-1])
+plt.plot(midpoints,y,'r-^',color = "skyblue")
+plt.xticks(intervals)
+y,edges,_=plt.hist(df['Daily Average Humidity'],bins=intervals, histtype ='step',edgecolor='white')
+midpoints=0.5*(edges[1:]+edges[:-1])
+plt.plot(midpoints,y,'r-^')
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
+#ogive curve
+data = df['Daily Average Temperature in Faherenhite']
+# creating class interval
+classInterval = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+# calculating frequency and intervals
+values, base = np.histogram(data, bins=classInterval)
+# calculating cumulative frequency
+cumsum = np.cumsum(values)
+# reversing cumulative frequency
+res = np.flipud(cumsum)
+# plotting ogive
+plt.plot(base[1:], res, color='brown', marker='o', linestyle='-')
+# formatting the graph
+plt.title('Ogive Graph')
+plt.xlabel('Daily Average Temperature in Faherenhite')
+plt.ylabel('Frequency')
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
+#Ogive for humidity:
+data = df['Daily Average Humidity']
+# creating class interval
+classInterval = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+# calculating frequency and intervals
+values, base = np.histogram(data, bins=classInterval)
+# calculating cumulative frequency
+cumsum = np.cumsum(values)
+# reversing cumulative frequency
+res = np.flipud(cumsum)
+# plotting ogive
+plt.plot(base[1:], res, color='brown', marker='o', linestyle='-')
+# formatting the graph
+plt.title('Ogive Graph')
+plt.xlabel('Daily Average Humidity')
+plt.ylabel('Frequency')
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
+#pie chart for humidity
+labels = 'H< 0', '0 <= H < 10', '10 <= H < 20', '20 <= H < 30', '30 <= H < 40','40 <= H < 50','50 <= H <
+60','60 <= H < 70','70 <= H < 80','80 <= H < 90','90 <= H'
+sizes = [size_1, size_2, size_3, size_4, size_5, size_6, size_7, size_8, size_9, size_10, size_11]
+fig1, ax1 = plt.subplots()
+explode = (0.5, 0.7, 1, 0.1,0.1,0.1, 0.1, 0.1, 0.1,0.3,0.4)
+ax1.pie(sizes, explode=explode, labels=labels,
+shadow=True, startangle=90)
+plt.show()
 
-# SageMath parsed files
-*.sage.py
+#Pie chart for Temperature:
+import matplotlib.pyplot as plt
+labels = 'Temp < 0', '0 <= Temp < 20', '20 <= Temp < 40', '40 <= Temp < 60', '60 <= Temp'
+sizes = [size1, size2, size3, size4,size5]
+fig1, ax1 = plt.subplots()
+explode = (0, 0.5, 0.2, 0.1,0.1)
+ax1.pie(sizes, explode=explode, labels=labels,
+shadow=True, startangle=90)
+plt.show()
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+#probability density function
+#As our is approx uniformly distributed
+#as we know that mean =44.35 and s.d 15.34
+# calculating alpha and beta values
+#mean = (alpha +beta)/2 and variance = ((alpha-beta)^2)/12
+#by solving them we get alpha and beta values as
+alpha =17.78
+beta= 70.92
+pdf=stats.uniform.pdf(x,loc=alpha,scale=53.14)
+f(x) = 0.011275451252264085 ;if alpha<= x<=beta
+= 0 ; otherwise
+plt.plot(x,pdf,color='black')
+plt.xlabel('temperature')
+plt.ylabel("PDF");
+plt.show()
 
-# Spyder project settings
-.spyderproject
-.spyproject
+#Curve fitting (straight line, second degree parabola, exponential curve, power curve)
+#Fitting straight line
 
-# Rope project settings
-.ropeproject
+from scipy.optimize import curve_fit
+# define the true objective function
+def objective(x, a, b):
+return a * x + b
+# curve fit
+popt, _ = curve_fit(objective, num, freq)
+# summarize the parameter values
+a, b = popt
+print('y = %.5f * x + %.5f' % (a, b))
+# plot input vs output
+plt.scatter(num, freq)
+# define a sequence of inputs between the smallest and largest known inputs
+x_line = nm.arange(min(num), max(num), 1)
+# calculate the output for the range
+y_line = objective(x_line, a, b)
+# create a line plot for the mapping function
+plt.plot(x_line, y_line, '-*', color='red')
+plt.show()
+#Straight line equation is y = -0.29881 * x + 62.63814
 
-# mkdocs documentation
-/site
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+#Fitting second degree parabola:
 
-# Pyre type checker
-.pyre/
+def obj(x, a, b, c):
+return a * x + b * x**2 + c
+popt, _ = curve_fit(obj, num, freq)
+# summarize the parameter values
+a, b, c = popt
+print('y = %.5f * x + %.5f * x^2 + %.5f' % (a, b, c))
+# plot input vs output
+plt.scatter(num, freq)
+# define a sequence of inputs between the smallest and largest known inputs
+x_line = nm.arange(min(num), max(num), 1)
+# calculate the output for the range
+y_line = obj(x_line, a, b, c)
+# create a line plot for the mapping function
+plt.plot(x_line, y_line, '-^', color='red')
+plt.show()
+#Parabola equation is y = -0.71619 * x + 0.00499 * x^2 + 70.15912
+
+#fitting exponential curve:
+
+def exponential(x, a, b):
+return a*(2.718**(b*x))
+popt, _ = curve_fit(exponential, num, freq)
+# summarize the parameter values
+a, b = popt
+print('y = %.5f * x^%.5f' % (a, b))
+# plot input vs output
+plt.scatter(num, freq)
+# define a sequence of inputs between the smallest and largest known inputs
+x_line = nm.arange(min(num), max(num), 1)
+# calculate the output for the range
+y_line = exponential(x_line, a, b)
+# create a line plot for the mapping function
+plt.plot(x_line, y_line, '-^', color='red')
+plt.show()
+#Exponential curve equation is y = 0.00000 * x^1.00000
+
+#Fitting power curve:
+
+def power(x, a, b):
+return a *(x**b)
+popt, _ = curve_fit(power, num, freq)
+# summarize the parameter values
+a, b = popt
+print('y = %.5f * x^%.5f' % (a, b))
+# plot input vs output
+plt.scatter(num, freq)
+# define a sequence of inputs between the smallest and largest known inputs
+x_line = nm.arange(min(num), max(num), 1)
+# calculate the output for the range
+y_line = power(x_line, a, b)
+# create a line plot for the mapping function
+plt.plot(x_line, y_line, '-^', color='red')
+plt.show()
+#Power curve equation is y = 1.00000 * x^1.00000
+
+#Hypothesis testing
+
+# NULL Hypothesis H(0): mean of temperatures = 45 degree Faherenhite
+#ALTERNATIVE Hypothesis H(a): mean of temperature != 45 degree faherenhite
+import numpy as np
+import math
+import pandas as pd
+from statistics import mean
+data1 = pd.read_csv('math_assignment2.csv')
+data1['Daily ]Average Temperature in Faherenhite'].mean()
+Mean =44.34
+data1['Daily Average Humidity'].mean()
+mean=49.39
+#Let us have the value of alpha set to 0.5 i.e for Type 1 error
+#This is a 2 sided test do the value of z at 0.5 making it 0.025 for the 2 sides from the z-table is +1.96/-1.96
+sampData = data1['Daily Average Temperature in
+Faherenhite'][np.argsort(np.random.random(5777))[:100]
+meanSampData = sampData.mean()
+hypMean = 45
+N = 100
+stand_Population = np.std(data1['Daily Average Temperature in Faherenhite'])
+(meanSampData - hypMean)/(stand_Population/math.sqrt(N))
+#-1.45
+# As the calculated z-score i.e 0.5855006114330584 is less than the tabular z-score i.e +1.96,
+# we accept the NULL hypothesis
+# If also we would have got -0.5855006114330584 which was greater than the tabular z-score i.e -1.96,
+# we would have accepted the NULL Hypothesis
+# Observed Value = + 0.5855006114330584
+# Critical Value = + 1.96
+# By rejecting the NULL hypothesis when it had to be rejected, we have saved ourselves from making the TYPE I Error,
+# as the value of the mean is not actually 45 degree Fahrenheit.
+# Now let us perform hypothesis testing using P-Value Method (Observed Significance Level)
+# The P-Value defines the smallest probability (a) for which the NULL Hypothesis can be rejected.
+# Let us define the smallest probability value a = 0.05
+# Now if p is less than or equal to a, we will get a strong evidence against NULL Hypothesis
+# Hence, we will reject the NULL Hypothesis
+# If p is greater than a, we will get a weak evidence against NULL Hypothesis
+# Thus, we will fail to reject the NULL Hypothesis
+# As the value of p gets nearer to a,
+# the evidence becomes more confusing and we become less sure about rejecting or not rejecting the NULL Hypothesis
+# Now the Observed z-score value is 0.5855006114330584 which is approximately 0.58
+# For 0.58 in the z-score table, we get the standard normal probability of 0.71904
+# So, our P-Value is 1-0.71904 = 0.28096
+# As the P-Value is much greater than the set a, we have a very weak evidence against the NULL Hypothesis
+# Thus, we fail to reject the NULL Hypothesis
+import scipy.stats as st
+# This built in libarary function takes in the sample Data and the hypothised mean value
+st.ttest_1samp(sampData,45)
+Ttest_1sampResult(statistic=-1.2956164970906812, pvalue=0.198120413636069)
+#0.198120413636069> 0.05 # we fail to reject the NULL Hypothesis
+#True
+# Now let us create another NULL Hypothesis
+# NULL Hypothesis: mean = 40 degree Farehnite
+# We can test this hypothesis using the P-Value Method
+st.ttest_1samp(sampData, 37)
+Ttest_1sampResult(statistic=3.3690693610215794, pvalue=0.0010759331830419035)
+#0.0010759331830419035 < 0.05 # we reject the hypothesis
+#True
+
+# Correlation
+
+import seaborn as sns
+%matplotlib inline
+np.corrcoef(data1['Daily Average Temperature in Faherenhite'], data1['Daily Average Humidity'])
+#Here we obtain a matrix and find out the Pearson's correlation between Average Temperature and
+Average Humidity
+# Correlation of 1 is between itself and with each other they have a correlation of - 0.26749585
+array([[ 1. , -0.26749585], [-0.26749585, 1. ]])
+# Now let us calculate all the 3 types of correlations
+
+#1.Pearson's Coefficient
+st.pearsonr(data1['Daily Average Temperature in Faherenhite'], data1['Daily Average Humidity'])
+#(-0.26749585424355415, 3.091294263611235e-95)
+
+#2. Spearman's Coefficient
+st.spearmanr(data1['Daily Average Temperature in Faherenhite'], data1['Daily Average Humidity'])
+#SpearmanrResult(correlation=-0.23285873284950573, pvalue=5.527272991599998e-72)
+
+#3. Kendall Coefficient
+st.kendalltau(data1['Daily Average Temperature in Faherenhite'], data1['Daily Average Humidity'])
+#KendalltauResult(correlation=-0.15847186888264012, pvalue=1.17299611302675)
+
+#A Correlation Heatmap also helps us understand Correlation between various variables very easily
+sns.heatmap(data1.corr())
+
+# Linear regression
+
+from sklearn import linear_model
+avg_temperature = pd.DataFrame(data1['Daily Average Temperature in Faherenhite'])
+avg_humidity = pd.DataFrame(data1['Daily Average Humidity'])
+lm = linear_model.LinearRegression()
+model = lm.fit(avg_temperature, avg_humidity)
+
+#Regression for temperature
+dataset = pd.read_csv('math_assignment2.csv')
+X = dataset.iloc[:, 2:3].values
+y = dataset.iloc[:,-1].values
+#Now we split the dataset for training and testing purposes
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=1/3,random_state=0)
+Now we fit the regression model using the training set
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(X_train,y_train) #actually produces the linear eqn for the data
+# Now as we have trained the model we can predict the results and check from the testing set
+y_pred = regressor.predict(X_test)
+y_pred
+y_test
+
+#Plot in graphs
+
+#training set for (temp vs hum)
+plt.scatter(X_train, y_train, color='yellow') # plotting the observation line
+plt.plot(X_train, regressor.predict(X_train), color='red') # plotting the regression line
+plt.title("Avg Temperature vs Avg Humidity (Training set)") # stating the title of the graph
+plt.xlabel("Average Temperature in F") # adding the name of x-axis
+plt.ylabel("Percent of Average in Humidity") # adding the name of y-axis
+plt.show() # specifies end of graph
+
+#Now, plotting for the test:
+plt.scatter(X_test, y_test, color='yellow')
+plt.plot(X_train, regressor.predict(X_train), color='red') # plotting the regression line
+plt.title("Avg Temperature vs Avg Humidity (Testing set)")
+plt.xlabel("Average Temperature in F")
+plt.ylabel("Percent of Average in Humidity")
+plt.show()
+
+#Central Moments for temperature
+
+#0th central moment
+stats.moment(data1['Daily Average Humidity'], moment = 0) #1.0
+
+#1st central moment
+stats.moment(data1['Daily Average Humidity'], moment = 1) #0.0
+
+#2nd central moment
+stats.moment(data1['Daily Average Humidity'], moment = 2) #294.6465687427377
+
+#3rd central moment
+stats.moment(data1['Daily Average Humidity'], moment = 3) #1514.1927772196852
+
+#4th central moment
+stats.moment(data1['Daily Average Humidity'], moment = 4) #218961.85550016686
+
+#Non central moment for temperature
+def raw_moments_T(n,m):
+  sum = 0
+  N = 0
+  for ele in data1['Daily Average Temperature in Faherenhite']:
+    sum += (ele-m)**n
+    N += 1
+  return (sum/N)
+print("-----------Raw Moments for Daily Average Temperature in Faherenhite\n")
+n = int(input("\nPlease enter the value of 'n' to find the nth raw moment:"))
+print(f"\nPlease enter the point about which you will like to find the {n}th raw moment:")
+m = int(input())
+print(f"The {n}th raw moment about {m} is {raw_moments_T(n,m)}")
+
+#Non central moment for humidity
+def raw_moments_H(n,m):
+   sum = 0
+  N = 0
+  for ele in data1['Daily Average Humidity']:
+    sum += (ele-m)**n
+    N += 1
+  return (sum/N)
+n = int(input("\nPlease enter the value of 'n' to find the nth raw moment:"))
+print(f"\nPlease enter the point about which you will like to find the {n}th raw moment:")
+m = int(input())
+print(f"The {n}th raw moment about {m} is {raw_moments_H(n,m)}")
